@@ -1,0 +1,140 @@
+package ponte;
+
+import javax.crypto.*;
+import javax.crypto.spec.SecretKeySpec;
+import java.io.*;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.time.LocalDate;
+import java.util.*;
+
+public class GerenciadorTarefas {
+    private LinkedList<Tarefa> tarefas; // Lista encadeada para tarefas
+    private Stack<String> historico;   // Pilha para histórico de ações
+    private Usuario usuario;
+    private static final String CHAVE_SECRETA = "chaveAES12345678"; 
+    private LinkedList<String> logsAuditoria; // Lista para logs de auditoria
+
+    public GerenciadorTarefas(Usuario usuario) {
+        this.tarefas = new LinkedList<>();
+        this.historico = new Stack<>();
+        this.usuario = usuario;
+        this.logsAuditoria = new LinkedList<>();
+    }
+
+    public void adicionarTarefa(String descricao, String prioridade, LocalDate vencimento) {
+        int id = tarefas.size() + 1;
+        Tarefa nova = new Tarefa(id, descricao, prioridade, vencimento);
+        tarefas.add(nova);
+        historico.push("Adicionada tarefa ID: " + id);
+        logsAuditoria.add("[" + LocalDate.now() + "] " + usuario.getNome() + " adicionou tarefa ID: " + id);
+        System.out.println("Tarefa adicionada!");
+    }
+
+    public void removerTarefa(int id) {
+        Tarefa removida = null;
+        for (Tarefa t : tarefas) {
+            if (t.getId() == id) {
+                removida = t;
+                break;
+            }
+        }
+        if (removida != null) {
+            tarefas.remove(removida);
+            historico.push("Removida tarefa ID: " + id);
+            logsAuditoria.add("[" + LocalDate.now() + "] " + usuario.getNome() + " removeu tarefa ID: " + id);
+            System.out.println("Tarefa removida!");
+        } else {
+            System.out.println("Tarefa não encontrada.");
+        }
+    }
+
+    public void desfazer() {
+        if (!historico.isEmpty()) {
+            String acao = historico.pop();
+            logsAuditoria.add("[" + LocalDate.now() + "] " + usuario.getNome() + " desfez: " + acao);
+            System.out.println("Ação desfeita: " + acao);
+        } else {
+            System.out.println("Nenhuma ação para desfazer.");
+        }
+    }
+
+    public void listarTarefas() {
+        if (tarefas.isEmpty()) {
+            System.out.println("Nenhuma tarefa cadastrada.");
+        } else {
+            for (Tarefa t : tarefas) {
+                System.out.println(t);
+            }
+        }
+    }
+
+    public void salvarDados(String arquivo) {
+        try {
+            StringBuilder dados = new StringBuilder();
+            for (Tarefa t : tarefas) {
+                dados.append(t.getId()).append(";").append(t.getDescricao()).append(";")
+                     .append(t.getPrioridade()).append(";").append(t.isConcluida()).append(";")
+                     .append(t.getDataVencimento()).append("\n");
+            }
+            String dadosCriptografados = criptografar(dados.toString());
+            try (FileWriter writer = new FileWriter(arquivo)) {
+                writer.write(dadosCriptografados);
+            }
+            System.out.println("Dados salvos com criptografia!");
+        } catch (Exception e) {
+            System.out.println("Erro ao salvar: " + e.getMessage());
+        }
+    }
+
+    public void carregarDados(String arquivo) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(arquivo))) {
+            StringBuilder criptografado = new StringBuilder();
+            String linha;
+            while ((linha = reader.readLine()) != null) {
+                criptografado.append(linha).append("\n");
+            }
+            String dados = descriptografar(criptografado.toString());
+            String[] linhas = dados.split("\n");
+            for (String l : linhas) {
+                if (!l.trim().isEmpty()) {
+                    String[] partes = l.split(";");
+                    int id = Integer.parseInt(partes[0]);
+                    String desc = partes[1];
+                    String prio = partes[2];
+                    boolean conc = Boolean.parseBoolean(partes[3]);
+                    LocalDate venc = LocalDate.parse(partes[4]);
+                    Tarefa t = new Tarefa(id, desc, prio, venc);
+                    t.setConcluida(conc);
+                    tarefas.add(t);
+                }
+            }
+            System.out.println("Dados carregados e descriptografados!");
+        } catch (Exception e) {
+            System.out.println("Erro ao carregar: " + e.getMessage());
+        }
+    }
+
+    private String criptografar(String texto) throws Exception {
+        SecretKeySpec chave = new SecretKeySpec(CHAVE_SECRETA.getBytes(), "AES");
+        Cipher cipher = Cipher.getInstance("AES");
+        cipher.init(Cipher.ENCRYPT_MODE, chave);
+        byte[] criptografado = cipher.doFinal(texto.getBytes());
+        return Base64.getEncoder().encodeToString(criptografado);
+    }
+
+    private String descriptografar(String textoCriptografado) throws Exception {
+        SecretKeySpec chave = new SecretKeySpec(CHAVE_SECRETA.getBytes(), "AES");
+        Cipher cipher = Cipher.getInstance("AES");
+        cipher.init(Cipher.DECRYPT_MODE, chave);
+        byte[] descriptografado = cipher.doFinal(Base64.getDecoder().decode(textoCriptografado));
+        return new String(descriptografado);
+    }
+
+    public void exibirLogs() {
+        System.out.println("Logs de Auditoria:");
+        for (String log : logsAuditoria) {
+            System.out.println(log);
+        }
+    }
+}
