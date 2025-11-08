@@ -1,0 +1,84 @@
+package ponte;
+import java.time.LocalDate;
+	import java.util.Scanner;
+	
+public class Aplicacao {
+	    public static void main(String[] args) {
+	        Scanner scanner = new Scanner(System.in);
+
+	        System.out.print("Nome de usuário: ");
+	        String nome = scanner.nextLine();
+	        System.out.print("Senha: ");
+	        String senha = scanner.nextLine();
+	        Usuario usuario = new Usuario(nome, senha);
+
+	        System.out.print("Confirme a senha para login: ");
+	        String confirmacao = scanner.nextLine();
+	        if (!usuario.verificarSenha(confirmacao)) {
+	            System.out.println("Senha incorreta. Saindo...");
+	            return;
+	        }
+
+	        GerenciadorTarefas gerenciador = new GerenciadorTarefas(usuario);
+
+	        while (true) {
+	            System.out.println("\n--- Gerenciador de Tarefas ---");
+	            System.out.println("1. Adicionar tarefa");
+	            System.out.println("2. Remover tarefa");
+	            System.out.println("3. Listar tarefas");
+	            System.out.println("4. Desfazer ação");
+	            System.out.println("5. Salvar dados");
+	            System.out.println("6. Carregar dados");
+	            System.out.println("7. Exibir logs de auditoria");
+	            System.out.println("8. Sair");
+	            System.out.print("Escolha: ");
+	            int opcao = scanner.nextInt();
+	            scanner.nextLine(); 
+
+	            switch (opcao) {
+	                case 1:
+	                    System.out.print("Descrição: ");
+	                    String desc = scanner.nextLine();
+	                    System.out.print("Prioridade (Alta/Media/Baixa): ");
+	                    String prio = scanner.nextLine();
+	                    System.out.print("Data de vencimento (AAAA-MM-DD): ");
+	                    LocalDate venc = LocalDate.parse(scanner.nextLine());
+	                    gerenciador.adicionarTarefa(desc, prio, venc);
+	                    break;
+	                case 2:
+	                    System.out.print("ID da tarefa a remover: ");
+	                    int id = scanner.nextInt();
+	                    gerenciador.removerTarefa(id);
+	                    break;
+	                    
+	                case 3:
+	                    gerenciador.listarTarefas();
+	                    break;
+	                    
+	                case 4:
+	                    gerenciador.desfazer();
+	                    break;
+	                    
+	                case 5:
+	                    gerenciador.salvarDados("tarefas.txt");
+	                    break;
+	                    
+	                case 6:
+	                    gerenciador.carregarDados("tarefas.txt");
+	                    break;
+	                    
+	                case 7:
+	                    gerenciador.exibirLogs();
+	                    break;
+	                    
+	                case 8:
+	                    System.out.println("Saindo...");
+	                    return;
+	                  
+	                default:
+	                    System.out.println("Opção inválida.");
+	            
+	            } 
+	        }
+	    }
+	}
